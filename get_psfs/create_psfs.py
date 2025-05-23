@@ -59,12 +59,12 @@ def new_analyze_ref_stack(stack_path, skip_factor=1, border_exclude_size=13):
     return peak_locations, sigmas
 
 
-def average_crop_one_picture(Im, centers):
+def average_crop_one_picture(Im, centers, red_x_location):
     """
     Average all crops in a picture (reference)
     Do all operations with numpy (without loops) to ensure efficiency
     """
-    rows, cols = centers_to_rows_and_columns(centers)
+    rows, cols = centers_to_rows_and_columns(centers, red_x_location)
     crops = Im[rows, cols]
 
     # Compute border median for all crops at once
@@ -84,7 +84,7 @@ def average_crop_one_picture(Im, centers):
     return average_array
 
 
-def average_crop_all_pictures(spectral_ref_stack_paths, peaks):
+def average_crop_all_pictures(spectral_ref_stack_paths, peaks, red_x_location):
     """
     Average all crops for each color, on all images (reference).
     """
@@ -101,7 +101,7 @@ def average_crop_all_pictures(spectral_ref_stack_paths, peaks):
         average_crop_all_pictures_one_color = np.zeros(CROP_SIZE)
         for j in range(num_images):
             average_crop_all_pictures_one_color += average_crop_one_picture(
-                stack[j], np.round(peaks[j])
+                stack[j], np.round(peaks[j]), red_x_location
             )  # perhaps can be improved, but not critical.
         average_crop_all_pictures_one_color = (
             average_crop_all_pictures_one_color / num_images

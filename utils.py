@@ -1,7 +1,6 @@
 import numpy as np
 
-CROP_SIZE = (9, 19)
-RED_X_LOCATION = int(CROP_SIZE[1] - 4)
+CROP_SIZE = (9, 18)
 RED_Y_LOCATION = np.ceil(CROP_SIZE[0] / 2).astype(int)
 
 
@@ -46,7 +45,7 @@ def flatten(xss):
     return [x for xs in xss for x in xs]
 
 
-def centers_to_rows_and_columns(centers):
+def centers_to_rows_and_columns(centers, red_x_location):
     centers = np.array(centers).astype(int)
 
     # Precompute all crops at once
@@ -56,6 +55,6 @@ def centers_to_rows_and_columns(centers):
     )
     cols = (
         centers[:, 0, None, None]
-        + np.arange(-RED_X_LOCATION, CROP_SIZE[1] - RED_X_LOCATION)[None, None, :]
+        + np.arange(-red_x_location, CROP_SIZE[1] - red_x_location)[None, None, :]
     )
     return rows, cols

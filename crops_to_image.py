@@ -29,14 +29,12 @@ def parallel_ols(target_crops, basis_images):
     return b
 
 
-def reconstruct_RGB_crops_OLS(crops, basis_images, grad_flag=True):
+def reconstruct_RGB_crops_OLS(crops, num_channels, basis_images):
     # basis_images: num_ch*PSFs, num_ch*grad_dx, num_ch*grad_dy
     num_basis, height, width = basis_images.shape
     num_crops = crops.shape[0]
-    if grad_flag:
-        _num_ch = basis_images.shape[0] // 3
-    else:
-        _num_ch = basis_images.shape[0]
+    _num_ch = num_channels
+    # _num_ch=basis_images.shape[0]//3
     norm_factor = np.max(crops, axis=(1, 2), keepdims=True)
     norm_crops = crops / norm_factor
     # start_time=time.time()
@@ -44,7 +42,7 @@ def reconstruct_RGB_crops_OLS(crops, basis_images, grad_flag=True):
     # end_time=time.time()
 
     basis_images_flat = basis_images.reshape(num_basis, -1)  # Shape: (num_basis, 9*19)
-    basis_red_flat = basis_images_flat[::_num_ch]  # Shape: (num_basis/num_ch, 9*19)
+    basis_red_flat = basis_images_flat[1::_num_ch]  # Shape: (num_basis/num_ch, 9*19)
     # Compute reconstructed crops
     reconstructed_flat = betas @ basis_images_flat  # Shape: (num_crops, 9*19)
     reconstructed_crops = np.clip(
@@ -56,7 +54,7 @@ def reconstruct_RGB_crops_OLS(crops, basis_images, grad_flag=True):
     )
     for ch in range(_num_ch):
         reconstructed_RGB_flat = (
-            betas[:, ch::_num_ch] @ basis_red_flat
+            betas[:, 1 + ch :: _num_ch] @ basis_red_flat
         )  # Shape: (num_crops, 9*19)
         reconstructed_RGB_crops[..., ch] = np.clip(
             reconstructed_RGB_flat.reshape(num_crops, height, width),
@@ -64,11 +62,6 @@ def reconstruct_RGB_crops_OLS(crops, basis_images, grad_flag=True):
             a_max=None,
         )
 
-    # recon_RGB[i,:,:,ch]=psfs_t[0]*coefficients[ch]+coefficients[ch+_num_ch]*psf_dx[0]+coefficients[ch+2*_num_ch]*psf_dy[0]
-
-    # Reshape back to original crop shape
-    # reconstructed_RGB_crops=reconstructed_RGB_flat.reshape(num_crops, height, width)  # Shape: (num_crops, 9, 19)
-    ###NEED TO PUT HERE CHANNELS
     reconstructed_crops *= norm_factor
     reconstructed_RGB_crops *= norm_factor[..., None]
 

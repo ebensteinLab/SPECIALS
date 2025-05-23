@@ -5,8 +5,8 @@ import numpy as np
 from utils import CROP_SIZE, centers_to_rows_and_columns
 
 
-def get_crops(im, centers, median_calc=True):
-    rows, cols = centers_to_rows_and_columns(centers)
+def get_crops(im, centers, red_x_location, median_calc=True):
+    rows, cols = centers_to_rows_and_columns(centers, red_x_location)
     crops = im[rows, cols]
 
     # Compute border median for all crops at once
@@ -28,7 +28,7 @@ def get_crops(im, centers, median_calc=True):
     return crops, overall_mean, overall_std, crops_max
 
 
-def get_crops_all_pictures(stack, crop_locations, median_calc=True):
+def get_crops_all_pictures(stack, crop_locations, red_x_location, median_calc=True):
     """
     Get crops from the stack of images according to the crop_locations.
     """
@@ -43,7 +43,7 @@ def get_crops_all_pictures(stack, crop_locations, median_calc=True):
         centers = crop_locations[i]
         number_of_peaks = len(centers)
         crops, overall_mean, overall_std, crops_max = get_crops(
-            image, centers, median_calc
+            image, centers, red_x_location, median_calc
         )
         all_crops[current_peak : current_peak + number_of_peaks, :, :] = crops
         all_crops_max[current_peak : current_peak + number_of_peaks] = crops_max
