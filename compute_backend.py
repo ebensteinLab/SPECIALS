@@ -1,11 +1,12 @@
+# gpu_cpu_compat.py
 """
 Compatibility layer for GPU/CPU operations.
 Automatically detects GPU availability and provides unified interface.
 """
 
 import numpy as np
+from scipy.ndimage import zoom, convolve as scipy_convolve
 from scipy.fft import fft2, ifft2, fftshift, ifftshift
-from scipy.ndimage import convolve as scipy_convolve
 from scipy.signal import fftconvolve as scipy_fftconvolve
 
 # Try to import GPU libraries
@@ -216,6 +217,65 @@ class ComputeBackend:
         else:
             from scipy.ndimage import gaussian_filter1d
             return gaussian_filter1d(input_array, sigma=sigma, axis=axis)
+
+    def round(self, array):
+        """Round array elements"""
+        if self.use_gpu:
+            return cp.round(array)
+        else:
+            return np.round(array)
+
+    def arange(self, *args, **kwargs):
+        """Create range array"""
+        if self.use_gpu:
+            return cp.arange(*args, **kwargs)
+        else:
+            return np.arange(*args, **kwargs)
+
+    def zoom(self, input_array, zoom_factor, order=1):
+        """Zoom/resize array"""
+        if self.use_gpu:
+            from cupyx.scipy.ndimage import zoom as gpu_zoom
+            return gpu_zoom(input_array, zoom_factor, order=order)
+        else:
+            from scipy.ndimage import zoom
+            return zoom(input_array, zoom_factor, order=order)
+
+    def get_memory_info(self):
+        """Get available memory information"""
+        if self.use_gpu:
+            try:
+                free_mem, total_mem = cp.cuda.runtime.memGetInfo()
+                return free_mem, total_mem
+            except:
+                # Fallback if CUDA not available
+                return None, None
+        else:
+            # For CPU, estimate available RAM (simplified)
+            import psutil
+            try:
+                virtual_memory = psutil.virtual_memory()
+                return virtual_memory.available, virtual_memory.total
+            except:
+                return None, None
+
+    def free_memory_pool(self):
+        """Free memory pool (GPU only operation)"""
+        if self.use_gpu:
+            try:
+                mempool = cp._default_memory_pool
+                mempool.free_all_blocks()
+            except:
+                pass  # Silently fail if memory pool not available
+        # No-op for CPU
+
+    def handle_out_of_memory_error(self, exception):
+        """Check if exception is out of memory error"""
+        if self.use_gpu:
+            return isinstance(exception, cp.cuda.memory.OutOfMemoryError)
+        else:
+            # For CPU, check for MemoryError
+            return isinstance(exception, MemoryError)
 
 
 # Create global backend instance
