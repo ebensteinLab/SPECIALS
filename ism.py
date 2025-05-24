@@ -1,10 +1,10 @@
-from utils import CROP_SIZE, RED_X_LOCATION
+from utils import CROP_SIZE
 import numpy as np
 import cupy as cp
 import cupyx
 
 
-def run_ism(all_convolved_crops, M, peaks, scatter_add_batch_size=100000):
+def run_ism(all_convolved_crops, M, peaks, red_x_location):
     """
     Generate final image using ISM from the convolved crops.
     """
@@ -27,7 +27,7 @@ def run_ism(all_convolved_crops, M, peaks, scatter_add_batch_size=100000):
     )
     cols = (
         ism_rounded_peaks[:, 0, None, None, None]
-        + cp.arange(-int(RED_X_LOCATION * M), int((CROP_SIZE[1] - RED_X_LOCATION) * M))[
+        + cp.arange(-int(red_x_location * M), int((CROP_SIZE[1] - red_x_location) * M))[
             None, None, :, None
         ]
     )

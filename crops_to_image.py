@@ -1,6 +1,6 @@
 import numpy as np
 
-from utils import RED_Y_LOCATION, RED_X_LOCATION, CROP_SIZE
+from utils import RED_Y_LOCATION, CROP_SIZE
 
 
 def parallel_ols(target_crops, basis_images):
@@ -68,7 +68,7 @@ def reconstruct_RGB_crops_OLS(crops, num_channels, basis_images):
     return reconstructed_crops, reconstructed_RGB_crops
 
 
-def compose_im_from_rgb_crops(rgb_crops, rounded_peaks, im_size=(512, 512)):
+def compose_im_from_rgb_crops(rgb_crops, rounded_peaks, red_x_location, im_size=(512, 512)):
     num_channels = rgb_crops.shape[-1]
     # Prepare output array
     composed_image = np.zeros((im_size[0], im_size[1], num_channels))
@@ -81,7 +81,7 @@ def compose_im_from_rgb_crops(rgb_crops, rounded_peaks, im_size=(512, 512)):
     )
     cols = (
         rounded_peaks[:, 0, None, None, None]
-        + np.arange(-RED_X_LOCATION, CROP_SIZE[1] - RED_X_LOCATION)[None, None, :, None]
+        + np.arange(-red_x_location, CROP_SIZE[1] - red_x_location)[None, None, :, None]
     )
     channels = (
         np.zeros((rounded_peaks.shape[0], 1, 1, 1))

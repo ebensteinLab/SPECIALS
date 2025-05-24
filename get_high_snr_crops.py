@@ -1,7 +1,6 @@
-import cupyx
-import cupy as cp
 import numpy as np
 
+from compute_backend import backend
 from utils import flatten
 
 SNR_THRESHOLD = 0.1
@@ -10,51 +9,72 @@ SNR_THRESHOLD = 0.1
 def estimate_noise_variance_gpu(crops):
     """
     Estimate noise variance in the data, combining Poisson and Gaussian components.
-    Args:
-        data: 3D numpy array (noisy data - not normalized).
-    Returns:
-        Estimated noise variance.
-    """
+    Automatically uses GPU if available, falls back to CPU otherwise.
 
+    Args:
+        crops: 3D numpy array (noisy data - not normalized).
+    Returns:
+        Tuple of (estimated noise variance, SNR values) as numpy arrays.
+    """
     sigma = 0.8
-    data = cp.asarray(crops, dtype=cp.float32)
+    data = backend.asarray(crops, dtype=np.float32)
     dims = data.ndim
 
     # Poisson noise: mean signal level
-    poisson_var = cp.mean(data, axis=(-2, -1))
+    poisson_var = backend.mean(data, axis=(-2, -1))
 
-    # # # Gaussian noise: residual variance after smoothing
+    # Gaussian noise: residual variance after smoothing
     if dims == 3:
-        border_mask = cp.ones_like(data[0, ...], dtype=bool)
+        border_mask = backend.ones_like(data[0, ...], dtype=bool)
     else:
-        border_mask = cp.ones_like(data, dtype=bool)
-    #
+        border_mask = backend.ones_like(data, dtype=bool)
+
     border_mask[1:-1, 1:-1] = False
-    smoothedX = cupyx.scipy.ndimage.gaussian_filter1d(
-        data, sigma=sigma, axis=-2
-    )  # Adjust sigma if needed
-    smoothed = cupyx.scipy.ndimage.gaussian_filter1d(
-        smoothedX, sigma=sigma, axis=-1
-    )  # Adjust sigma if needed
+
+    # Apply Gaussian filtering in both directions
+    smoothedX = backend.gaussian_filter1d(data, sigma=sigma, axis=-2)
+    smoothed = backend.gaussian_filter1d(smoothedX, sigma=sigma, axis=-1)
 
     if dims == 3:
-        border_mean = cp.mean(data[:, border_mask], axis=1)
-        data_mean = cp.mean(data, axis=(-2, -1))
-        bad_ind = cp.where(border_mean > data_mean)[0]
+        border_mean = backend.mean(data[:, border_mask], axis=1)
+        data_mean = backend.mean(data, axis=(-2, -1))
+        bad_ind = backend.where(border_mean > data_mean, True, False)[0]
         residuals = data[:, border_mask] - smoothed[:, border_mask]
     else:
         residuals = data[border_mask] - smoothed[border_mask]
+        bad_ind = backend.asarray([])  # Empty array for consistency
 
-    # residuals=data-smoothed
-    gaussian_var = cp.var(residuals, axis=(-2, -1))
-    snr = cp.max(smoothed, axis=(-2, -1)) / (poisson_var + gaussian_var)
-    snr[bad_ind] = 0.0
+    # Calculate Gaussian variance from residuals
+    gaussian_var = backend.var(residuals, axis=(-2, -1))
+
+    # Calculate SNR
+    snr = backend.max(smoothed, axis=(-2, -1)) / (poisson_var + gaussian_var)
+
+    # Set bad indices to 0 SNR
+    if dims == 3 and len(bad_ind) > 0:
+        snr_copy = snr.copy()
+        for idx in bad_ind:
+            snr_copy[idx] = 0.0
+        snr = snr_copy
 
     # Total variance is the sum of both components
-    return (poisson_var + gaussian_var**2).get(), snr.get()
+    total_variance = poisson_var + gaussian_var ** 2
+
+    return backend.asnumpy(total_variance), backend.asnumpy(snr)
 
 
 def get_high_snr_crops(all_crops, peaks):
+    """
+    Filter crops and peaks based on SNR threshold.
+    Works with both GPU and CPU backends automatically.
+
+    Args:
+        all_crops: Array of image crops
+        peaks: List of peak coordinates
+
+    Returns:
+        Tuple of (filtered peaks, filtered crops) with high SNR
+    """
     noise, snr = estimate_noise_variance_gpu(all_crops)
     flattened_peaks = np.array(flatten(peaks))
     high_snr_ind = np.where(snr > SNR_THRESHOLD)[0]
