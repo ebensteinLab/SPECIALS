@@ -58,7 +58,7 @@ def estimate_noise_variance_gpu(crops):
         snr = snr_copy
 
     # Total variance is the sum of both components
-    total_variance = poisson_var + gaussian_var ** 2
+    total_variance = poisson_var + gaussian_var**2
 
     return backend.asnumpy(total_variance), backend.asnumpy(snr)
 

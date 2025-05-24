@@ -20,20 +20,20 @@ def run_ism(all_convolved_crops, M, peaks, red_x_location):
     window_x = slice(CROP_SIZE[1])
 
     rows = (
-            ism_rounded_peaks[:, 1, None, None, None]
-            + backend.arange(-int(CROP_SIZE[0] * M // 2), int(CROP_SIZE[0] * M // 2))[
-              None, :, None, None
-              ]
+        ism_rounded_peaks[:, 1, None, None, None]
+        + backend.arange(-int(CROP_SIZE[0] * M // 2), int(CROP_SIZE[0] * M // 2))[
+            None, :, None, None
+        ]
     )
     cols = (
-            ism_rounded_peaks[:, 0, None, None, None]
-            + backend.arange(-int(red_x_location * M), int((CROP_SIZE[1] - red_x_location) * M))[
-              None, None, :, None
-              ]
+        ism_rounded_peaks[:, 0, None, None, None]
+        + backend.arange(
+            -int(red_x_location * M), int((CROP_SIZE[1] - red_x_location) * M)
+        )[None, None, :, None]
     )
     channels = (
-            backend.zeros((ism_rounded_peaks.shape[0], 1, 1, 1))
-            + backend.arange(num_channels)[None, None, None, :]
+        backend.zeros((ism_rounded_peaks.shape[0], 1, 1, 1))
+        + backend.arange(num_channels)[None, None, None, :]
     )
     rows, cols, channels = rows.astype(int), cols.astype(int), channels.astype(int)
 
@@ -43,20 +43,26 @@ def run_ism(all_convolved_crops, M, peaks, red_x_location):
     if backend.use_gpu and free_mem is not None:
         usable_memory = free_mem * 0.8
         # Estimate optimal batch size for GPU
-        memory_per_pair = 2 * single_image_memory * (M ** 2) * num_channels
+        memory_per_pair = 2 * single_image_memory * (M**2) * num_channels
         batch_size = max(1, int(usable_memory // memory_per_pair))
-        print(f"Available GPU memory: {free_mem / 1e6:.2f} MB, Using batch size: {batch_size}")
+        print(
+            f"Available GPU memory: {free_mem / 1e6:.2f} MB, Using batch size: {batch_size}"
+        )
     else:
         # For CPU, use a more conservative batch size based on data size
         if free_mem is not None:
             usable_memory = free_mem * 0.3  # More conservative for CPU
-            memory_per_pair = 2 * single_image_memory * (M ** 2) * num_channels
+            memory_per_pair = 2 * single_image_memory * (M**2) * num_channels
             batch_size = max(1, int(usable_memory // memory_per_pair))
-            print(f"Available CPU memory: {free_mem / 1e6:.2f} MB, Using batch size: {batch_size}")
+            print(
+                f"Available CPU memory: {free_mem / 1e6:.2f} MB, Using batch size: {batch_size}"
+            )
         else:
             # Fallback batch size if memory info not available
             batch_size = max(1, min(100, num_images // 10))
-            print(f"Memory info not available, using conservative batch size: {batch_size}")
+            print(
+                f"Memory info not available, using conservative batch size: {batch_size}"
+            )
 
     accum = backend.zeros((im_size_M, im_size_M, num_channels))
 

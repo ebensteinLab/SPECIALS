@@ -5,7 +5,7 @@ Automatically detects GPU availability and provides unified interface.
 """
 
 import numpy as np
-from scipy.ndimage import zoom, convolve as scipy_convolve
+from scipy.ndimage import convolve as scipy_convolve
 from scipy.fft import fft2, ifft2, fftshift, ifftshift
 from scipy.signal import fftconvolve as scipy_fftconvolve
 
@@ -47,7 +47,7 @@ class ComputeBackend:
 
     def asnumpy(self, array):
         """Convert array back to numpy"""
-        if self.use_gpu and hasattr(array, 'get'):
+        if self.use_gpu and hasattr(array, "get"):
             return array.get()
         else:
             return np.asarray(array)
@@ -166,7 +166,7 @@ class ComputeBackend:
         else:
             return ifftshift(array)
 
-    def fftconvolve(self, in1, in2, mode='full', axes=None):
+    def fftconvolve(self, in1, in2, mode="full", axes=None):
         if self.use_gpu:
             return gpu_fftconvolve(in1, in2, mode=mode, axes=axes)
         else:
@@ -213,9 +213,11 @@ class ComputeBackend:
         """1D Gaussian filter"""
         if self.use_gpu:
             from cupyx.scipy.ndimage import gaussian_filter1d as gpu_gaussian_filter1d
+
             return gpu_gaussian_filter1d(input_array, sigma=sigma, axis=axis)
         else:
             from scipy.ndimage import gaussian_filter1d
+
             return gaussian_filter1d(input_array, sigma=sigma, axis=axis)
 
     def round(self, array):
@@ -236,9 +238,11 @@ class ComputeBackend:
         """Zoom/resize array"""
         if self.use_gpu:
             from cupyx.scipy.ndimage import zoom as gpu_zoom
+
             return gpu_zoom(input_array, zoom_factor, order=order)
         else:
             from scipy.ndimage import zoom
+
             return zoom(input_array, zoom_factor, order=order)
 
     def get_memory_info(self):
@@ -253,6 +257,7 @@ class ComputeBackend:
         else:
             # For CPU, estimate available RAM (simplified)
             import psutil
+
             try:
                 virtual_memory = psutil.virtual_memory()
                 return virtual_memory.available, virtual_memory.total

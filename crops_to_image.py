@@ -68,7 +68,9 @@ def reconstruct_RGB_crops_OLS(crops, num_channels, basis_images):
     return reconstructed_crops, reconstructed_RGB_crops
 
 
-def compose_im_from_rgb_crops(rgb_crops, rounded_peaks, red_x_location, im_size=(512, 512)):
+def compose_im_from_rgb_crops(
+    rgb_crops, rounded_peaks, red_x_location, im_size=(512, 512)
+):
     num_channels = rgb_crops.shape[-1]
     # Prepare output array
     composed_image = np.zeros((im_size[0], im_size[1], num_channels))

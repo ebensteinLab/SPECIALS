@@ -7,7 +7,7 @@ from compute_backend import backend
 
 
 def sparse_deconvolution_ista_centered(
-        ism_image, psf, lambda_reg=0.1, num_iterations=50
+    ism_image, psf, lambda_reg=0.1, num_iterations=50
 ):
     """
     Perform sparse deconvolution using ISTA with centered FFT.
@@ -32,8 +32,8 @@ def sparse_deconvolution_ista_centered(
     # Pad the PSF to match the ISM image dimensions
     psf_padded = backend.zeros((height, width), dtype=psf.dtype)
     psf_padded[
-    height // 2 - psf.shape[0] // 2: height // 2 + psf.shape[0] // 2 + 1,
-    width // 2 - psf.shape[1] // 2: width // 2 + psf.shape[1] // 2 + 1,
+        height // 2 - psf.shape[0] // 2 : height // 2 + psf.shape[0] // 2 + 1,
+        width // 2 - psf.shape[1] // 2 : width // 2 + psf.shape[1] // 2 + 1,
     ] = psf
 
     # Center the PSF in the spatial domain before FFT
@@ -54,23 +54,28 @@ def sparse_deconvolution_ista_centered(
     for iteration in range(num_iterations):
         for channel in range(num_channels):
             # Fourier transform of the current estimate
-            current_estimate_ft = backend.fft2(backend.fftshift(reconstructed_image[:, :, channel]))
+            current_estimate_ft = backend.fft2(
+                backend.fftshift(reconstructed_image[:, :, channel])
+            )
 
             # Gradient of the data fidelity term
             fidelity_gradient_ft = psf_ft_conj * (
-                    current_estimate_ft * psf_ft - backend.fft2(backend.fftshift(ism_image[:, :, channel]))
+                current_estimate_ft * psf_ft
+                - backend.fft2(backend.fftshift(ism_image[:, :, channel]))
             )
-            fidelity_gradient = backend.ifftshift(backend.ifft2(fidelity_gradient_ft).real)
+            fidelity_gradient = backend.ifftshift(
+                backend.ifft2(fidelity_gradient_ft).real
+            )
 
             # Update the reconstructed image with gradient descent
             updated_image = (
-                    reconstructed_image[:, :, channel] - step_size * fidelity_gradient
+                reconstructed_image[:, :, channel] - step_size * fidelity_gradient
             )
 
             # Apply soft thresholding for sparsity
-            reconstructed_image[:, :, channel] = backend.sign(updated_image) * backend.maximum(
-                backend.abs(updated_image) - lambda_reg * step_size, 0
-            )
+            reconstructed_image[:, :, channel] = backend.sign(
+                updated_image
+            ) * backend.maximum(backend.abs(updated_image) - lambda_reg * step_size, 0)
 
         # Optionally monitor convergence (loss, PSNR, etc.)
 
@@ -78,14 +83,14 @@ def sparse_deconvolution_ista_centered(
 
 
 def decompose_to_channels_batched_only_gpu(
-        crops_with_high_intensity,
-        psfs,
-        rounded_peaks,
-        number_of_rl_iters=30,
-        rl_batch_size=200000,
-        scatter_add_batch_size=100000,
-        should_compute_final_image=True,
-        number_of_channels=3,
+    crops_with_high_intensity,
+    psfs,
+    rounded_peaks,
+    number_of_rl_iters=30,
+    rl_batch_size=200000,
+    scatter_add_batch_size=100000,
+    should_compute_final_image=True,
+    number_of_channels=3,
 ):
     """
     Builds the image from the crops.
@@ -161,7 +166,7 @@ def decompose_to_channels_batched_only_gpu(
 
 
 def richardson_lucy_batched_gpu(
-        images, psf, num_iter=50, clip=False, filter_epsilon=None, batch_size=100
+    images, psf, num_iter=50, clip=False, filter_epsilon=None, batch_size=100
 ):
     """
     Richardson-Lucy deconvolution with automatic GPU/CPU fallback.
@@ -189,10 +194,15 @@ def richardson_lucy_batched_gpu(
         im_deconv = backend.full(batch_images.shape, 0.5, dtype=float_type)
 
         for _ in range(num_iter):
-            conv = backend.fftconvolve(im_deconv, psf_backend, mode="same", axes=(1, 2)) + eps
+            conv = (
+                backend.fftconvolve(im_deconv, psf_backend, mode="same", axes=(1, 2))
+                + eps
+            )
 
             if filter_epsilon:
-                relative_blur = backend.where(conv < filter_epsilon, 0, batch_images / conv)
+                relative_blur = backend.where(
+                    conv < filter_epsilon, 0, batch_images / conv
+                )
             else:
                 relative_blur = batch_images / conv
 
